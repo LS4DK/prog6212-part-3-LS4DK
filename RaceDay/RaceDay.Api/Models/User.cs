@@ -8,6 +8,9 @@ public class User
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
 
+    /// <summary>Public Azure Blob Storage URL of the profile picture (optional).</summary>
+    public string? ProfilePictureUrl { get; set; }
+
     public int RoleId { get; set; }
     public Role Role { get; set; } = null!;
 

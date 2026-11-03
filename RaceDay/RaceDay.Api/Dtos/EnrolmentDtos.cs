@@ -10,6 +10,13 @@ public class EnrolRequest
     public int CategoryId { get; set; }
 }
 
+public class UpdateEnrolmentStatusRequest
+{
+    /// <summary>Pending, Confirmed or Cancelled.</summary>
+    [Required, EnumDataType(typeof(EnrolmentStatus))]
+    public EnrolmentStatus? Status { get; set; }
+}
+
 public class EnrolmentResponse
 {
     public int EnrolmentId { get; set; }
@@ -23,4 +30,6 @@ public class EnrolmentResponse
     public int CategoryId { get; set; }
     public string CategoryName { get; set; } = string.Empty;
     public bool HasResult { get; set; }
+    public TimeSpan? FinishTime { get; set; }
+    public int? FinishPosition { get; set; }
 }

@@ -11,8 +11,8 @@ using RaceDay.Api.Services;
 namespace RaceDay.Api.Tests.Infrastructure;
 
 /// <summary>
-/// Starts the real API in memory for testing, but swaps SQL Server for an in-memory database
-/// and uses fast password hashing. Each instance gets its own empty database.
+/// Starts the real API in memory for testing, but swaps SQL Server for an in-memory database,
+/// Azure Blob Storage for a fake, and uses fast password hashing. Each instance gets its own empty database.
 /// </summary>
 public class RaceDayFactory : WebApplicationFactory<Program>
 {
@@ -38,6 +38,10 @@ public class RaceDayFactory : WebApplicationFactory<Program>
             // Fast hashing for tests (the stored hash records its own iteration count)
             services.RemoveAll<PasswordService>();
             services.AddSingleton(new PasswordService(1_000));
+
+            // No real Azure account is needed for tests
+            services.RemoveAll<IImageStorage>();
+            services.AddSingleton<IImageStorage, FakeImageStorage>();
         });
     }
 

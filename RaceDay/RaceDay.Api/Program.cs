@@ -11,6 +11,9 @@ builder.Services.AddDbContext<RaceDayDbContext>(options =>
 
 builder.Services.AddSingleton<PasswordService>();
 
+// Image uploads go to Azure Blob Storage (tests swap this for a fake)
+builder.Services.AddSingleton<IImageStorage, AzureBlobImageStorage>();
+
 // Server-side session: the server remembers UserId + Role, the browser only holds a session cookie
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
@@ -63,5 +66,5 @@ app.MapControllers();
 
 app.Run();
 
-// Lets the unit test project (Step 8) see the Program class
+// Lets the unit test project see the Program class
 public partial class Program { }

@@ -4,6 +4,7 @@ using RaceDay.Api.Auth;
 using RaceDay.Api.Data;
 using RaceDay.Api.Dtos;
 using RaceDay.Api.Models;
+using RaceDay.Api.Services;
 
 namespace RaceDay.Api.Controllers;
 
@@ -13,10 +14,14 @@ namespace RaceDay.Api.Controllers;
 public class EventsController : ControllerBase
 {
     private readonly RaceDayDbContext _db;
+    private readonly IImageStorage _images;
+    private readonly ILogger<EventsController> _logger;
 
-    public EventsController(RaceDayDbContext db)
+    public EventsController(RaceDayDbContext db, IImageStorage images, ILogger<EventsController> logger)
     {
         _db = db;
+        _images = images;
+        _logger = logger;
     }
 
     // Shapes the database rows into what the API returns, in a single query
@@ -40,18 +45,65 @@ public class EventsController : ControllerBase
                 .ToList()
         });
 
-    /// <summary>Lists events, soonest first. Upcoming events only unless includePast is true.</summary>
+    /// <summary>Lists events, soonest first, with optional filters. Upcoming events only unless includePast is true.</summary>
     /// <param name="includePast">Set to true to include events that have already happened.</param>
+    /// <param name="search">Text to look for in the event name or location (not case sensitive).</param>
+    /// <param name="eventType">Only show events of this type: Run, Walk or Cycle.</param>
+    /// <param name="fromDate">Only show events on or after this date (yyyy-MM-dd).</param>
+    /// <param name="toDate">Only show events on or before this date (yyyy-MM-dd).</param>
     /// <response code="200">An array of events.</response>
     [HttpGet]
     [ProducesResponseType(typeof(List<EventResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetEvents([FromQuery] bool includePast = false)
+    public async Task<IActionResult> GetEvents(
+        [FromQuery] bool includePast = false,
+        [FromQuery] string? search = null,
+        [FromQuery] EventType? eventType = null,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null)
     {
         var query = _db.Events.AsQueryable();
+
         if (!includePast)
             query = query.Where(e => e.Date >= DateTime.Today);
 
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToLower();
+            query = query.Where(e => e.Name.ToLower().Contains(term) || e.Location.ToLower().Contains(term));
+        }
+
+        if (eventType.HasValue)
+            query = query.Where(e => e.EventType == eventType.Value);
+
+        if (fromDate.HasValue)
+            query = query.Where(e => e.Date >= fromDate.Value.Date);
+
+        if (toDate.HasValue)
+        {
+            var endOfDay = toDate.Value.Date.AddDays(1);
+            query = query.Where(e => e.Date < endOfDay);
+        }
+
         var events = await ToResponse(query.OrderBy(e => e.Date)).ToListAsync();
+        return Ok(events);
+    }
+
+    /// <summary>Lists every event created by the logged-in Organiser (past and upcoming), with enrolment counts.</summary>
+    /// <response code="200">An array of the Organiser's events.</response>
+    /// <response code="401">Not logged in.</response>
+    /// <response code="403">Logged in, but not as an Organiser.</response>
+    [HttpGet("mine")]
+    [SessionAuthorize(RoleNames.Organiser)]
+    [ProducesResponseType(typeof(List<EventResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetMyEvents()
+    {
+        var organiserId = HttpContext.GetCurrentUserId();
+        var events = await ToResponse(
+            _db.Events.Where(e => e.OrganiserId == organiserId).OrderBy(e => e.Date))
+            .ToListAsync();
+
         return Ok(events);
     }
 
@@ -136,6 +188,55 @@ public class EventsController : ControllerBase
         await _db.SaveChangesAsync();
 
         var response = await ToResponse(_db.Events.Where(e => e.EventId == id)).FirstAsync();
+        return Ok(response);
+    }
+
+    /// <summary>Uploads a banner image (JPG, PNG or WebP, up to 5 MB) for an event to Azure Blob Storage and saves its URL.</summary>
+    /// <param name="id">The event ID.</param>
+    /// <param name="file">The image file.</param>
+    /// <response code="200">The updated event, including the banner URL.</response>
+    /// <response code="400">The file is missing, too large, or not a valid image.</response>
+    /// <response code="401">Not logged in.</response>
+    /// <response code="403">Not an Organiser, or not the Organiser who owns this event.</response>
+    /// <response code="404">No event with that ID.</response>
+    /// <response code="503">Image storage is unavailable.</response>
+    [HttpPost("{id:int}/banner")]
+    [SessionAuthorize(RoleNames.Organiser)]
+    [ProducesResponseType(typeof(EventResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> UploadBanner(int id, IFormFile file, CancellationToken cancellationToken)
+    {
+        var ev = await _db.Events.FirstOrDefaultAsync(e => e.EventId == id, cancellationToken);
+        if (ev == null)
+            return NotFound(new { message = "Event not found." });
+
+        if (ev.OrganiserId != HttpContext.GetCurrentUserId())
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "You can only change your own events." });
+
+        var error = ImageFileValidator.Validate(file, out var extension, out var contentType);
+        if (error != null)
+            return BadRequest(new { message = error });
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            ev.BannerImageUrl = await _images.UploadAsync(
+                $"events/{id}", $"{Guid.NewGuid():N}{extension}", contentType, stream, cancellationToken);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or Azure.RequestFailedException)
+        {
+            _logger.LogError(ex, "Banner upload failed for event {EventId}", id);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { message = "Image storage is unavailable. Please try again later." });
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        var response = await ToResponse(_db.Events.Where(e => e.EventId == id)).FirstAsync(cancellationToken);
         return Ok(response);
     }
 

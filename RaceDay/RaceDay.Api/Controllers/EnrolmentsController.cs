@@ -7,7 +7,7 @@ using RaceDay.Api.Models;
 
 namespace RaceDay.Api.Controllers;
 
-/// <summary>Participants enter events; Organisers see who entered their events.</summary>
+/// <summary>Participants enter events; Organisers see who entered their events and manage enrolment status.</summary>
 [ApiController]
 [Route("api")]
 public class EnrolmentsController : ControllerBase
@@ -32,7 +32,9 @@ public class EnrolmentsController : ControllerBase
             EventDate = en.Event.Date,
             CategoryId = en.CategoryId,
             CategoryName = en.Category.Name,
-            HasResult = en.Result != null
+            HasResult = en.Result != null,
+            FinishTime = en.Result != null ? en.Result.FinishTime : null,
+            FinishPosition = en.Result != null ? en.Result.FinishPosition : null
         });
 
     /// <summary>Enrols the logged-in Participant in an event under a chosen category.</summary>
@@ -111,7 +113,7 @@ public class EnrolmentsController : ControllerBase
 
     /// <summary>Lists everyone enrolled in an event. Only the event's Organiser may do this.</summary>
     /// <param name="eventId">The event ID.</param>
-    /// <response code="200">An array of enrolments with participant and category.</response>
+    /// <response code="200">An array of enrolments with participant, category, status and any captured result.</response>
     /// <response code="401">Not logged in.</response>
     /// <response code="403">Not an Organiser, or not the Organiser who owns this event.</response>
     /// <response code="404">The event does not exist.</response>
@@ -135,5 +137,36 @@ public class EnrolmentsController : ControllerBase
             .ToListAsync();
 
         return Ok(enrolments);
+    }
+
+    /// <summary>Sets an enrolment's status to Pending, Confirmed or Cancelled. Only the event's Organiser may do this.</summary>
+    /// <param name="enrolmentId">The enrolment ID.</param>
+    /// <param name="request">The new status.</param>
+    /// <response code="200">The updated enrolment.</response>
+    /// <response code="400">The status is missing or not Pending, Confirmed or Cancelled.</response>
+    /// <response code="401">Not logged in.</response>
+    /// <response code="403">Not an Organiser, or not the Organiser who owns this event.</response>
+    /// <response code="404">The enrolment does not exist.</response>
+    [HttpPut("enrolments/{enrolmentId:int}/status")]
+    [SessionAuthorize(RoleNames.Organiser)]
+    [ProducesResponseType(typeof(EnrolmentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateStatus(int enrolmentId, [FromBody] UpdateEnrolmentStatusRequest request)
+    {
+        var enrolment = await _db.Enrolments.Include(e => e.Event).FirstOrDefaultAsync(e => e.EnrolmentId == enrolmentId);
+        if (enrolment == null)
+            return NotFound(new { message = "Enrolment not found." });
+
+        if (enrolment.Event.OrganiserId != HttpContext.GetCurrentUserId())
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "You can only manage enrolments for your own events." });
+
+        enrolment.Status = request.Status!.Value;
+        await _db.SaveChangesAsync();
+
+        var response = await ToResponse(_db.Enrolments.Where(e => e.EnrolmentId == enrolmentId)).FirstAsync();
+        return Ok(response);
     }
 }

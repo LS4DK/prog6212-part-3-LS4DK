@@ -1,0 +1,51 @@
+name: Part 2 - Build and Test API
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate repository structure
+        run: |
+          SOLUTION=$(find . -maxdepth 4 \( -name '*.sln' -o -name '*.slnx' \) | head -n 1)
+          API_PROJECT=$(find . -name 'RaceDay.Api.csproj' | head -n 1)
+          TEST_PROJECT=$(find . -name 'RaceDay.Api.Tests.csproj' | head -n 1)
+          test -n "$SOLUTION" || { echo "::error::No solution file (.sln or .slnx) found"; exit 1; }
+          test -n "$API_PROJECT" || { echo "::error::API project (RaceDay.Api.csproj) not found"; exit 1; }
+          test -n "$TEST_PROJECT" || { echo "::error::Test project (RaceDay.Api.Tests.csproj) not found"; exit 1; }
+          test -d "$(dirname "$API_PROJECT")/Migrations" || { echo "::error::EF Core Migrations folder not found"; exit 1; }
+          if [ ! -f README.md ]; then echo "::warning::README.md not found at repository root"; fi
+          echo "Solution: $SOLUTION"
+          echo "SOLUTION=$SOLUTION" >> "$GITHUB_ENV"
+          echo "Repository structure OK."
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore "$SOLUTION"
+
+      - name: Build
+        run: dotnet build "$SOLUTION" --configuration Release --no-restore
+
+      - name: Run unit tests
+        run: dotnet test "$SOLUTION" --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/*.trx

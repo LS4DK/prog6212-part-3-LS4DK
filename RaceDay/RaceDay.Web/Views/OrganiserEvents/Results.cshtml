@@ -1,0 +1,69 @@
+﻿@model EventManageViewModel
+@{
+    ViewData["Title"] = "Results - " + Model.Event.Name;
+    ViewData["Tab"] = "results";
+
+    var entrants = Model.Enrolments
+        .Where(e => e.Status != EnrolmentStatus.Cancelled)
+        .OrderBy(e => e.FinishPosition ?? int.MaxValue)
+        .ThenBy(e => e.ParticipantName)
+        .ToList();
+    var published = entrants.Count(e => e.HasResult);
+}
+
+<div class="container py-4">
+    <partial name="_EventManageNav" model="Model.Event" />
+
+    @if (Model.Error != null)
+    {
+        <div class="alert alert-warning">@Model.Error</div>
+    }
+
+    @if (entrants.Count == 0 && Model.Error == null)
+    {
+        <div class="rd-card p-5 text-center">
+            <h2 class="h4">No participants to record results for</h2>
+            <p class="text-muted mb-0">Results can be entered once people have entered this event (cancelled enrolments are not listed).</p>
+        </div>
+    }
+    else if (entrants.Count > 0)
+    {
+        <div class="alert alert-info">
+            <strong>@published of @entrants.Count results published.</strong>
+            Enter the finish time as <strong>h:mm:ss</strong> (for example 1:47:32) or <strong>m:ss</strong> (for example 47:05).
+            Saving publishes the result straight away, and the participant sees it on their My Results page.
+        </div>
+
+        <div class="rd-card">
+            @foreach (var entrant in entrants)
+            {
+                <form asp-action="SaveResult" asp-route-id="@Model.Event.EventId" method="post" class="result-row">
+                    <input type="hidden" name="enrolmentId" value="@entrant.EnrolmentId" />
+                    <input type="hidden" name="hasResult" value="@(entrant.HasResult ? "true" : "false")" />
+
+                    <div class="result-who">
+                        <strong>@entrant.ParticipantName</strong><br />
+                        <span class="text-muted small">@entrant.CategoryName</span>
+                        @if (entrant.HasResult)
+                        {
+                            <span class="status-badge status-confirmed ms-1">Published</span>
+                        }
+                    </div>
+                    <div>
+                        <label class="form-label small mb-1">Finish time</label>
+                        <input type="text" name="finishTime" class="form-control" placeholder="h:mm:ss"
+                               value="@(entrant.HasResult ? Formatters.FinishTime(entrant.FinishTime) : "")" />
+                    </div>
+                    <div>
+                        <label class="form-label small mb-1">Position</label>
+                        <input type="number" name="finishPosition" class="form-control" min="1" placeholder="e.g. 47"
+                               value="@(entrant.FinishPosition?.ToString())" />
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-brand w-100">@(entrant.HasResult ? "Update" : "Save & publish")</button>
+                    </div>
+                </form>
+            }
+        </div>
+    }
+</div>

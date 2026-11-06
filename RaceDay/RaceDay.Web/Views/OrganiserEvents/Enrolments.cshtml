@@ -1,0 +1,94 @@
+﻿@model EventManageViewModel
+@{
+    ViewData["Title"] = "Enrolments - " + Model.Event.Name;
+    ViewData["Tab"] = "enrolments";
+
+    var enrolments = Model.Enrolments;
+    var confirmed = enrolments.Count(e => e.Status == EnrolmentStatus.Confirmed);
+    var pending = enrolments.Count(e => e.Status == EnrolmentStatus.Pending);
+    var cancelled = enrolments.Count(e => e.Status == EnrolmentStatus.Cancelled);
+}
+
+<div class="container py-4">
+    <partial name="_EventManageNav" model="Model.Event" />
+
+    @if (Model.Error != null)
+    {
+        <div class="alert alert-warning">@Model.Error</div>
+    }
+
+    @if (enrolments.Count == 0 && Model.Error == null)
+    {
+        <div class="rd-card p-5 text-center">
+            <h2 class="h4">Nobody has entered yet</h2>
+            <p class="text-muted mb-0">Once participants enter this event, they'll appear here with their chosen category.</p>
+        </div>
+    }
+    else if (enrolments.Count > 0)
+    {
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3"><div class="stat-tile"><div class="stat-number">@enrolments.Count</div><div class="stat-label">Total</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-tile"><div class="stat-number">@confirmed</div><div class="stat-label">Confirmed</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-tile"><div class="stat-number">@pending</div><div class="stat-label">Pending</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-tile"><div class="stat-number">@cancelled</div><div class="stat-label">Cancelled</div></div></div>
+        </div>
+
+        <div class="mb-3">
+            @foreach (var group in enrolments.GroupBy(e => e.CategoryName).OrderBy(g => g.Key))
+            {
+                <span class="category-chip">@group.Key: @group.Count()</span>
+            }
+        </div>
+
+        <div class="rd-card p-2 p-md-3">
+            <div class="table-responsive">
+                <table class="table table-rd align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Participant</th>
+                            <th>Category</th>
+                            <th>Entered on</th>
+                            <th>Status</th>
+                            <th>Change status</th>
+                            <th>Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var enrolment in enrolments)
+                        {
+                            <tr>
+                                <td class="fw-bold">@enrolment.ParticipantName</td>
+                                <td>@enrolment.CategoryName</td>
+                                <td>@Formatters.ShortDate(enrolment.EnrolmentDate)</td>
+                                <td><span class="status-badge status-@enrolment.Status.ToString().ToLower()">@enrolment.Status</span></td>
+                                <td>
+                                    <form asp-action="SetEnrolmentStatus" asp-route-id="@Model.Event.EventId" method="post" class="d-flex gap-2">
+                                        <input type="hidden" name="enrolmentId" value="@enrolment.EnrolmentId" />
+                                        <select name="status" class="form-select form-select-sm">
+                                            @foreach (var status in Enum.GetValues<EnrolmentStatus>())
+                                            {
+                                                <option value="@status" selected="@(enrolment.Status == status)">@status</option>
+                                            }
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-outline-brand">Update</button>
+                                    </form>
+                                </td>
+                                <td>
+                                    @if (enrolment.HasResult)
+                                    {
+                                        <strong>@Formatters.Ordinal(enrolment.FinishPosition ?? 0)</strong>
+                                        <span class="text-muted">&middot; @Formatters.FinishTime(enrolment.FinishTime)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

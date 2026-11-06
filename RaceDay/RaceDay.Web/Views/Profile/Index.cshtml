@@ -1,0 +1,77 @@
+﻿@model ProfilePageViewModel
+@{
+    ViewData["Title"] = "My profile";
+    var user = Model.User;
+    var initial = string.IsNullOrWhiteSpace(user.Name) ? "?" : user.Name.Trim()[0].ToString().ToUpper();
+}
+
+<div class="container py-4">
+    <h1 class="page-title mb-4">My profile</h1>
+
+    <div class="row g-4">
+        <div class="col-md-5 col-lg-4">
+            <div class="rd-card p-4 text-center">
+                @if (!string.IsNullOrEmpty(user.ProfilePictureUrl))
+                {
+                    <img class="avatar mb-3" src="@user.ProfilePictureUrl" alt="Your profile picture" />
+                }
+                else
+                {
+                    <div class="avatar-initial mb-3">@initial</div>
+                }
+                <h2 class="h4 mb-1">@user.Name</h2>
+                <span class="role-pill ms-0">@user.Role</span>
+                <p class="text-muted small mt-2">@user.Email</p>
+                <hr />
+
+                <form asp-action="UploadPicture" method="post" enctype="multipart/form-data">
+                    <label class="form-label" for="picture">Change profile picture</label>
+                    <input type="file" id="picture" name="picture" class="form-control mb-2"
+                           accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" />
+                    <div class="form-text mb-3">JPG, PNG or WebP, up to 5 MB.</div>
+                    <button type="submit" class="btn btn-outline-brand w-100">Upload picture</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-7 col-lg-8">
+            <div class="rd-card p-4">
+                <h2 class="h4 mb-3">Your details</h2>
+
+                <form asp-action="Update" method="post" novalidate>
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Form.Name" class="form-label"></label>
+                        <input asp-for="Form.Name" class="form-control" autocomplete="name" />
+                        <span asp-validation-for="Form.Name" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Form.Email" class="form-label"></label>
+                        <input asp-for="Form.Email" class="form-control" autocomplete="email" />
+                        <span asp-validation-for="Form.Email" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Account type</label>
+                        <input class="form-control" value="@user.Role" disabled />
+                    </div>
+
+                    <button type="submit" class="btn btn-brand px-4">Save changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Quick check in the browser before uploading (the API checks again on the server)
+        document.getElementById('picture').addEventListener('change', function () {
+            var file = this.files[0];
+            if (file && file.size > 5 * 1024 * 1024) {
+                alert('That image is larger than 5 MB. Please choose a smaller one.');
+                this.value = '';
+            }
+        });
+    </script>
+}

@@ -1,0 +1,78 @@
+﻿@model ResultsViewModel
+@{
+    ViewData["Title"] = "My results";
+    var results = Model.Results;
+    var bestPosition = results.Where(r => r.FinishPosition.HasValue).Select(r => r.FinishPosition!.Value).DefaultIfEmpty(0).Min();
+    var podiums = results.Count(r => r.FinishPosition is >= 1 and <= 3);
+}
+
+<div class="container py-4">
+    <h1 class="page-title mb-4">My results</h1>
+
+    @if (Model.Error != null)
+    {
+        <div class="alert alert-warning">@Model.Error</div>
+    }
+
+    @if (results.Count == 0 && Model.Error == null)
+    {
+        <div class="rd-card p-5 text-center">
+            <h2 class="h4">No results yet</h2>
+            <p class="text-muted">Once an organiser publishes your finish time, your race history will appear here.</p>
+            <a asp-controller="Enrolments" asp-action="Index" class="btn btn-brand">See my enrolments</a>
+        </div>
+    }
+    else if (results.Count > 0)
+    {
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="stat-tile">
+                    <div class="stat-number">@results.Count</div>
+                    <div class="stat-label">@(results.Count == 1 ? "Race finished" : "Races finished")</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-tile">
+                    <div class="stat-number">@(bestPosition > 0 ? Formatters.Ordinal(bestPosition) : "-")</div>
+                    <div class="stat-label">Best finish</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-tile">
+                    <div class="stat-number">@podiums</div>
+                    <div class="stat-label">Top-3 finishes</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="rd-card p-2 p-md-3">
+            <div class="table-responsive">
+                <table class="table table-rd align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Finish time</th>
+                            <th>Position</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var result in results)
+                        {
+                            <tr>
+                                <td>
+                                    <a asp-controller="Events" asp-action="Details" asp-route-id="@result.EventId" class="fw-bold text-decoration-none">@result.EventName</a>
+                                </td>
+                                <td>@Formatters.ShortDate(result.EventDate)</td>
+                                <td>@result.CategoryName</td>
+                                <td class="fw-bold">@Formatters.FinishTime(result.FinishTime)</td>
+                                <td><span class="position">@Formatters.Position(result.FinishPosition, result.TotalFinishers)</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

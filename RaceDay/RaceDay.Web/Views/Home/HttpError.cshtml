@@ -1,0 +1,23 @@
+﻿@model int
+@{
+    var title = Model switch
+    {
+        404 => "Page not found",
+        403 => "Not allowed",
+        _ => "Something went wrong"
+    };
+    var message = Model switch
+    {
+        404 => "We couldn't find the page you were looking for. It may have moved, or the address may be mistyped.",
+        403 => "You don't have permission to see that page.",
+        _ => "We hit a problem loading that page. Please try again in a moment."
+    };
+    ViewData["Title"] = title;
+}
+
+<div class="container py-5 text-center">
+    <div class="error-code">@Model</div>
+    <h1 class="page-title d-inline-block">@title</h1>
+    <p class="lead text-muted mt-3">@message</p>
+    <a class="btn btn-brand" asp-controller="Home" asp-action="Index">Back to home</a>
+</div>

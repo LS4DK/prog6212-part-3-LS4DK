@@ -1,0 +1,77 @@
+﻿@model EventDto
+@{
+    ViewData["Title"] = "Categories - " + Model.Name;
+    ViewData["Tab"] = "categories";
+
+    var suggestions = new[] { "5km", "10km", "21km", "42km", "Under 20", "Senior", "Masters", "Open" }
+        .Where(s => !Model.Categories.Any(c => c.Name.Equals(s, StringComparison.OrdinalIgnoreCase)))
+        .ToList();
+}
+
+<div class="container py-4">
+    <partial name="_EventManageNav" model="Model" />
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="rd-card p-4">
+                <h2 class="h4 mb-3">Add a category</h2>
+                <p class="text-muted small">Categories can be a distance (10km) or an age group (Under 20). Participants choose one when they enter.</p>
+
+                <form asp-action="AddCategory" asp-route-id="@Model.EventId" method="post">
+                    <div class="input-group mb-3">
+                        <input type="text" id="categoryName" name="name" class="form-control" maxlength="50" placeholder="e.g. 10km" required />
+                        <button type="submit" class="btn btn-brand">Add</button>
+                    </div>
+                </form>
+
+                @if (suggestions.Count > 0)
+                {
+                    <div class="small text-muted mb-1">Quick add:</div>
+                    @foreach (var suggestion in suggestions)
+                    {
+                        <button type="button" class="category-chip chip-button" data-name="@suggestion">@suggestion</button>
+                    }
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="rd-card p-4">
+                <h2 class="h4 mb-3">Categories for this event</h2>
+
+                @if (Model.Categories.Count == 0)
+                {
+                    <p class="text-muted mb-0">No categories yet. Participants can't enter until you add at least one.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var category in Model.Categories)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span class="fw-bold">@category.Name</span>
+                                <form asp-action="DeleteCategory" asp-route-id="@Model.EventId" asp-route-categoryId="@category.CategoryId" method="post"
+                                      onsubmit="return confirm('Remove the &quot;@category.Name&quot; category?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                                </form>
+                            </li>
+                        }
+                    </ul>
+                    <p class="text-muted small mt-3 mb-0">A category that people have already entered can't be removed.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.chip-button').forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                var input = document.getElementById('categoryName');
+                input.value = chip.dataset.name;
+                input.focus();
+            });
+        });
+    </script>
+}

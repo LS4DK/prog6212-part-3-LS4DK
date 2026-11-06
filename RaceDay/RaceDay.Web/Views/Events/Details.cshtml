@@ -1,0 +1,82 @@
+﻿@model EventDetailsViewModel
+@{
+    var ev = Model.Event;
+    ViewData["Title"] = ev.Name;
+    var isPast = ev.Date.Date < DateTime.Today;
+}
+
+<div class="container py-4">
+    <a asp-action="Index" class="text-decoration-none"><i class="bi bi-arrow-left"></i> All events</a>
+
+    <div class="row g-4 mt-1">
+        <div class="col-lg-8">
+            <div class="rd-card overflow-hidden">
+                @if (!string.IsNullOrEmpty(ev.BannerImageUrl))
+                {
+                    <img class="detail-banner" src="@ev.BannerImageUrl" alt="Banner for @ev.Name" />
+                }
+                else
+                {
+                    <div class="banner-placeholder detail-banner"><i class="bi bi-flag-fill"></i></div>
+                }
+
+                <div class="p-4">
+                    <span class="type-badge type-@ev.EventType.ToString().ToLower()">@ev.EventType</span>
+                    <h1 class="page-title mt-2 mb-4">@ev.Name</h1>
+
+                    @if (!string.IsNullOrWhiteSpace(ev.Description))
+                    {
+                        <p class="lead">@ev.Description</p>
+                    }
+
+                    <div class="info-row"><i class="bi bi-calendar-event"></i><span>@Formatters.EventDate(ev.Date)</span></div>
+                    <div class="info-row"><i class="bi bi-geo-alt"></i><span>@ev.Location</span></div>
+                    <div class="info-row"><i class="bi bi-signpost-2"></i><span>@Formatters.Distance(ev.Distance)</span></div>
+                    <div class="info-row"><i class="bi bi-person-badge"></i><span>Organised by @ev.OrganiserName</span></div>
+                    <div class="info-row"><i class="bi bi-people"></i><span>@ev.EnrolmentCount @(ev.EnrolmentCount == 1 ? "person has" : "people have") entered</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="rd-card p-4">
+                <h2 class="h4 mb-3">Categories</h2>
+
+                @if (Model.MyEnrolment != null)
+                {
+                    <div class="alert alert-success mb-3">
+                        <strong><i class="bi bi-check-circle"></i> You're entered!</strong><br />
+                        Category: @Model.MyEnrolment.CategoryName
+                    </div>
+                    <p class="mb-3">
+                        Status:
+                        <span class="status-badge status-@Model.MyEnrolment.Status.ToString().ToLower()">@Model.MyEnrolment.Status</span>
+                    </p>
+                    <a asp-controller="Enrolments" asp-action="Index" class="btn btn-outline-brand w-100">See my enrolments</a>
+                }
+                else if (isPast)
+                {
+                    <p class="text-muted mb-0">This event has already taken place, so entries are closed.</p>
+                }
+                else if (ev.Categories.Count == 0)
+                {
+                    <p class="text-muted mb-0">The organiser hasn't added any categories yet. Check back soon.</p>
+                }
+                else
+                {
+                    <form asp-action="Enrol" asp-route-id="@ev.EventId" method="post">
+                        <p class="text-muted small">Choose the category you want to enter.</p>
+                        @foreach (var category in ev.Categories)
+                        {
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="categoryId" id="cat-@category.CategoryId" value="@category.CategoryId" required />
+                                <label class="form-check-label" for="cat-@category.CategoryId">@category.Name</label>
+                            </div>
+                        }
+                        <button type="submit" class="btn btn-brand w-100 mt-3 py-2">Enter this event</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>

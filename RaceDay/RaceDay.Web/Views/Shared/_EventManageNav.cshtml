@@ -1,0 +1,28 @@
+﻿@model EventDto
+@{
+    var tab = ViewData["Tab"]?.ToString() ?? "";
+    string TabClass(string name) => tab == name ? "active" : "";
+    var isPast = Model.Date.Date < DateTime.Today;
+}
+
+<a asp-controller="OrganiserEvents" asp-action="Index" class="text-decoration-none"><i class="bi bi-arrow-left"></i> My events</a>
+
+<div class="rd-card p-3 p-md-4 mt-2 mb-4">
+    <span class="type-badge type-@Model.EventType.ToString().ToLower()">@Model.EventType</span>
+    @if (isPast)
+    {
+        <span class="status-badge status-past">Past event</span>
+    }
+    <h1 class="page-title h2 mt-2 mb-1">@Model.Name</h1>
+    <div class="text-muted">
+        <i class="bi bi-calendar-event"></i> @Formatters.EventDate(Model.Date)
+        &nbsp;&middot;&nbsp; <i class="bi bi-geo-alt"></i> @Model.Location
+    </div>
+
+    <ul class="nav nav-pills manage-tabs mt-3">
+        <li class="nav-item"><a class="nav-link @TabClass("details")" asp-controller="OrganiserEvents" asp-action="Edit" asp-route-id="@Model.EventId">Details</a></li>
+        <li class="nav-item"><a class="nav-link @TabClass("categories")" asp-controller="OrganiserEvents" asp-action="Categories" asp-route-id="@Model.EventId">Categories (@Model.Categories.Count)</a></li>
+        <li class="nav-item"><a class="nav-link @TabClass("enrolments")" asp-controller="OrganiserEvents" asp-action="Enrolments" asp-route-id="@Model.EventId">Enrolments (@Model.EnrolmentCount)</a></li>
+        <li class="nav-item"><a class="nav-link @TabClass("results")" asp-controller="OrganiserEvents" asp-action="Results" asp-route-id="@Model.EventId">Results</a></li>
+    </ul>
+</div>

@@ -1,0 +1,66 @@
+﻿@model EnrolmentsViewModel
+@{
+    ViewData["Title"] = "My enrolments";
+}
+
+<div class="container py-4">
+    <h1 class="page-title mb-4">My enrolments</h1>
+
+    @if (Model.Error != null)
+    {
+        <div class="alert alert-warning">@Model.Error</div>
+    }
+
+    @if (Model.Enrolments.Count == 0 && Model.Error == null)
+    {
+        <div class="rd-card p-5 text-center">
+            <h2 class="h4">You haven't entered any events yet</h2>
+            <p class="text-muted">Find a run, walk or cycle tour and enter in a few clicks.</p>
+            <a asp-controller="Events" asp-action="Index" class="btn btn-brand">Browse events</a>
+        </div>
+    }
+    else if (Model.Enrolments.Count > 0)
+    {
+        <div class="rd-card p-2 p-md-3">
+            <div class="table-responsive">
+                <table class="table table-rd align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Entered on</th>
+                            <th>Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var enrolment in Model.Enrolments)
+                        {
+                            <tr>
+                                <td>
+                                    <a asp-controller="Events" asp-action="Details" asp-route-id="@enrolment.EventId" class="fw-bold text-decoration-none">@enrolment.EventName</a>
+                                </td>
+                                <td>@Formatters.ShortDate(enrolment.EventDate)</td>
+                                <td>@enrolment.CategoryName</td>
+                                <td><span class="status-badge status-@enrolment.Status.ToString().ToLower()">@enrolment.Status</span></td>
+                                <td>@Formatters.ShortDate(enrolment.EnrolmentDate)</td>
+                                <td>
+                                    @if (enrolment.HasResult)
+                                    {
+                                        <strong>@Formatters.Ordinal(enrolment.FinishPosition ?? 0)</strong>
+                                        <span class="text-muted">&middot; @Formatters.FinishTime(enrolment.FinishTime)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Not published yet</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

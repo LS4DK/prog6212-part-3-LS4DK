@@ -59,12 +59,42 @@ if (app.Environment.IsDevelopment())
         options.SwaggerEndpoint("/openapi/v1.json", "RaceDay API v1"));
 }
 
-app.UseHttpsRedirection();
+// Containers only listen on plain HTTP, so HTTPS redirection is only used when running locally
+if (!app.Configuration.GetValue<bool>("DOTNET_RUNNING_IN_CONTAINER"))
+    app.UseHttpsRedirection();
+
 app.UseSession();          // must come before the controllers so they can read the session
 app.UseAuthorization();
 app.MapControllers();
 
+// Docker: create or update the database when the container starts
+if (app.Configuration.GetValue<bool>("RUN_MIGRATIONS"))
+    await ApplyMigrationsAsync(app);
+
 app.Run();
+
+// SQL Server can take a little while to start, so keep trying for up to 90 seconds
+static async Task ApplyMigrationsAsync(WebApplication app)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+    for (var attempt = 1; ; attempt++)
+    {
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<RaceDayDbContext>();
+            await db.Database.MigrateAsync();
+            logger.LogInformation("Database is up to date.");
+            return;
+        }
+        catch (Exception ex) when (attempt < 30)
+        {
+            logger.LogWarning("Database not ready yet (attempt {Attempt} of 30): {Message}", attempt, ex.Message);
+            await Task.Delay(TimeSpan.FromSeconds(3));
+        }
+    }
+}
 
 // Lets the unit test project see the Program class
 public partial class Program { }

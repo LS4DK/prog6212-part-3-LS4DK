@@ -1,0 +1,105 @@
+﻿@model EventListViewModel
+@{
+    ViewData["Title"] = "Upcoming events";
+}
+
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-end mb-3">
+        <h1 class="page-title mb-0">Upcoming events</h1>
+        <span class="text-muted">@Model.Events.Count @(Model.Events.Count == 1 ? "event" : "events") found</span>
+    </div>
+
+    <form method="get" asp-action="Index" class="rd-card p-3 mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label" for="search">Search</label>
+                <input type="text" id="search" name="search" value="@Model.Search" class="form-control" placeholder="Event name or town" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="eventType">Type</label>
+                <select id="eventType" name="eventType" class="form-select">
+                    <option value="">All types</option>
+                    @foreach (var type in Enum.GetValues<EventType>())
+                    {
+                        <option value="@type" selected="@(Model.SelectedType == type)">@type</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="fromDate">From</label>
+                <input type="date" id="fromDate" name="fromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="toDate">To</label>
+                <input type="date" id="toDate" name="toDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" class="form-control" />
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-brand flex-fill">Filter</button>
+                @if (Model.HasFilters)
+                {
+                    <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+                }
+            </div>
+        </div>
+    </form>
+
+    @if (Model.Error != null)
+    {
+        <div class="alert alert-warning">@Model.Error</div>
+    }
+
+    @if (Model.Events.Count == 0 && Model.Error == null)
+    {
+        <div class="rd-card p-5 text-center">
+            <h2 class="h4">No events found</h2>
+            <p class="text-muted mb-0">
+                @(Model.HasFilters ? "Nothing matches those filters. Try widening your search." : "There are no upcoming events right now. Check back soon!")
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var ev in Model.Events)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="rd-card event-card">
+                        <a asp-action="Details" asp-route-id="@ev.EventId">
+                            @if (!string.IsNullOrEmpty(ev.BannerImageUrl))
+                            {
+                                <img class="event-banner" src="@ev.BannerImageUrl" alt="Banner for @ev.Name" />
+                            }
+                            else
+                            {
+                                <div class="banner-placeholder"><i class="bi bi-flag-fill"></i></div>
+                            }
+                        </a>
+                        <div class="p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="type-badge type-@ev.EventType.ToString().ToLower()">@ev.EventType</span>
+                                @if (Model.EnrolledEventIds.Contains(ev.EventId))
+                                {
+                                    <span class="status-badge status-confirmed"><i class="bi bi-check-circle"></i> Enrolled</span>
+                                }
+                            </div>
+                            <h3 class="h4 mb-1">
+                                <a asp-action="Details" asp-route-id="@ev.EventId" class="text-decoration-none text-reset">@ev.Name</a>
+                            </h3>
+                            <p class="text-muted small mb-2">
+                                <i class="bi bi-calendar-event"></i> @Formatters.EventDate(ev.Date)<br />
+                                <i class="bi bi-geo-alt"></i> @ev.Location &middot; @Formatters.Distance(ev.Distance)
+                            </p>
+                            <div class="mb-3">
+                                @foreach (var category in ev.Categories.Take(4))
+                                {
+                                    <span class="category-chip">@category.Name</span>
+                                }
+                            </div>
+                            <a asp-action="Details" asp-route-id="@ev.EventId" class="btn btn-brand btn-sm">View details</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

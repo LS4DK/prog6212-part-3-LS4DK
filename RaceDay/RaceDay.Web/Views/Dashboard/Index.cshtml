@@ -1,0 +1,124 @@
+﻿@model DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+    var upcoming = Model.Upcoming;
+    var next = upcoming.FirstOrDefault();
+    var maxEnrolments = Math.Max(1, Model.Events.Select(e => e.EnrolmentCount).DefaultIfEmpty(0).Max());
+
+    string Countdown(DateTime date)
+    {
+        var days = (date.Date - DateTime.Today).Days;
+        return days switch
+        {
+            0 => "Today",
+            1 => "Tomorrow",
+            _ => $"In {days} days"
+        };
+    }
+}
+
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-end mb-4">
+        <div>
+            <h1 class="page-title mb-0">Dashboard</h1>
+            <p class="text-muted mt-3 mb-0">Welcome back, @CurrentUser.Name.</p>
+        </div>
+        <a asp-controller="OrganiserEvents" asp-action="Create" class="btn btn-brand"><i class="bi bi-plus-lg"></i> New event</a>
+    </div>
+
+    @if (Model.Error != null)
+    {
+        <div class="alert alert-warning">@Model.Error</div>
+    }
+
+    @if (Model.Events.Count == 0 && Model.Error == null)
+    {
+        <div class="rd-card p-5 text-center">
+            <h2 class="h4">You haven't created any events yet</h2>
+            <p class="text-muted">Create your first event, add categories, and participants can start entering.</p>
+            <a asp-controller="OrganiserEvents" asp-action="Create" class="btn btn-brand">Create your first event</a>
+        </div>
+    }
+    else if (Model.Events.Count > 0)
+    {
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="stat-tile">
+                    <div class="stat-number">@Model.Events.Count</div>
+                    <div class="stat-label">Events created</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="stat-tile">
+                    <div class="stat-number">@upcoming.Count</div>
+                    <div class="stat-label">Upcoming</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="stat-tile">
+                    <div class="stat-number">@Model.TotalEnrolments</div>
+                    <div class="stat-label">Total enrolments</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="stat-tile">
+                    <div class="stat-number">@(next == null ? "-" : Countdown(next.Date))</div>
+                    <div class="stat-label">@(next == null ? "No upcoming events" : "Next: " + next.Name)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div class="rd-card p-3 p-md-4 h-100">
+                    <h2 class="h4 mb-3">Upcoming events</h2>
+                    @if (upcoming.Count == 0)
+                    {
+                        <p class="text-muted mb-0">No upcoming events. <a asp-controller="OrganiserEvents" asp-action="Create">Create one</a>.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-rd align-middle mb-0">
+                                <thead>
+                                    <tr><th>Date</th><th>Event</th><th>When</th><th class="text-end">Enrolled</th><th></th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var ev in upcoming)
+                                    {
+                                        <tr>
+                                            <td class="text-nowrap">@Formatters.ShortDate(ev.Date)</td>
+                                            <td class="fw-bold">@ev.Name</td>
+                                            <td class="text-muted">@Countdown(ev.Date)</td>
+                                            <td class="text-end">@ev.EnrolmentCount</td>
+                                            <td class="text-end">
+                                                <a class="btn btn-sm btn-outline-brand" asp-controller="OrganiserEvents" asp-action="Enrolments" asp-route-id="@ev.EventId">Manage</a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="rd-card p-3 p-md-4 h-100">
+                    <h2 class="h4 mb-3">Enrolments per event</h2>
+                    @foreach (var ev in Model.Events.OrderByDescending(e => e.EnrolmentCount).Take(10))
+                    {
+                        var percent = (int)Math.Round(100.0 * ev.EnrolmentCount / maxEnrolments);
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between small">
+                                <span class="fw-bold">@ev.Name</span>
+                                <span>@ev.EnrolmentCount</span>
+                            </div>
+                            <div class="bar-track"><div class="bar-fill" style="width:@(percent)%"></div></div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>

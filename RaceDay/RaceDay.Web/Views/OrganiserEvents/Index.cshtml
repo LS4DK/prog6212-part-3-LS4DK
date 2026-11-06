@@ -1,0 +1,76 @@
+﻿@model OrganiserEventListViewModel
+@{
+    ViewData["Title"] = "My events";
+}
+
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-end mb-4">
+        <h1 class="page-title mb-0">My events</h1>
+        <a asp-action="Create" class="btn btn-brand"><i class="bi bi-plus-lg"></i> New event</a>
+    </div>
+
+    @if (Model.Error != null)
+    {
+        <div class="alert alert-warning">@Model.Error</div>
+    }
+
+    @if (Model.Events.Count == 0 && Model.Error == null)
+    {
+        <div class="rd-card p-5 text-center">
+            <h2 class="h4">No events yet</h2>
+            <p class="text-muted">Create an event to get started.</p>
+            <a asp-action="Create" class="btn btn-brand">Create an event</a>
+        </div>
+    }
+
+    @foreach (var ev in Model.Events)
+    {
+        var isPast = ev.Date.Date < DateTime.Today;
+        <div class="rd-card event-row mb-3">
+            <div class="row g-0">
+                <div class="col-md-3">
+                    @if (!string.IsNullOrEmpty(ev.BannerImageUrl))
+                    {
+                        <img class="event-thumb" src="@ev.BannerImageUrl" alt="Banner for @ev.Name" />
+                    }
+                    else
+                    {
+                        <div class="banner-placeholder event-thumb"><i class="bi bi-flag-fill"></i></div>
+                    }
+                </div>
+                <div class="col-md-9 p-3 p-md-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                        <div>
+                            <span class="type-badge type-@ev.EventType.ToString().ToLower()">@ev.EventType</span>
+                            @if (isPast)
+                            {
+                                <span class="status-badge status-past">Past event</span>
+                            }
+                            <h2 class="h4 mt-2 mb-1">@ev.Name</h2>
+                            <div class="text-muted small">
+                                <i class="bi bi-calendar-event"></i> @Formatters.EventDate(ev.Date)
+                                &nbsp;&middot;&nbsp; <i class="bi bi-geo-alt"></i> @ev.Location
+                                &nbsp;&middot;&nbsp; @Formatters.Distance(ev.Distance)
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="stat-number" style="font-size:2rem">@ev.EnrolmentCount</div>
+                            <div class="stat-label">Enrolled</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <a class="btn btn-sm btn-brand" asp-action="Categories" asp-route-id="@ev.EventId">Categories (@ev.Categories.Count)</a>
+                        <a class="btn btn-sm btn-outline-brand" asp-action="Enrolments" asp-route-id="@ev.EventId">Enrolments</a>
+                        <a class="btn btn-sm btn-outline-brand" asp-action="Results" asp-route-id="@ev.EventId">Results</a>
+                        <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@ev.EventId">Edit</a>
+                        <form asp-action="Delete" asp-route-id="@ev.EventId" method="post"
+                              onsubmit="return confirm('Delete &quot;@ev.Name&quot;? This cannot be undone.');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

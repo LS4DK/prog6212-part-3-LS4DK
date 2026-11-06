@@ -1,0 +1,41 @@
+# RaceDay: website + API + SQL Server database, started together with one command:
+#   docker compose up --build
+name: raceday
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-RaceDayStrong2026}
+      MSSQL_MEMORY_LIMIT_MB: "1536"
+    volumes:
+      - sql-data:/var/opt/mssql
+
+  api:
+    build:
+      context: ./RaceDay
+      dockerfile: RaceDay.Api/Dockerfile
+    depends_on:
+      - db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development   # keeps Swagger switched on
+      RUN_MIGRATIONS: "true"                # create the database tables when the container starts
+      ConnectionStrings__DefaultConnection: "Server=db;Database=RaceDay;User Id=sa;Password=${MSSQL_SA_PASSWORD:-RaceDayStrong2026};TrustServerCertificate=True;"
+      AzureStorage__ConnectionString: ${AZURE_STORAGE_CONNECTION_STRING:-}
+    ports:
+      - "5200:8080"
+
+  web:
+    build:
+      context: ./RaceDay
+      dockerfile: RaceDay.Web/Dockerfile
+    depends_on:
+      - api
+    environment:
+      Api__BaseUrl: http://api:8080/
+    ports:
+      - "8080:8080"
+
+volumes:
+  sql-data:

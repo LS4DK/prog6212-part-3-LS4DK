@@ -141,5 +141,5 @@ xUnit tests start the real API in memory (in-memory database and a fake image st
 Logins are held in memory, so everyone is logged out when a container restarts. The Docker log shows a harmless warning that data-protection keys are not persisted. Deleting an image's database reference does not delete the blob in Azure.
 
 ## AI tool disclosure
-<!-- Edit this so it is accurate for what YOU did. -->
-I used Claude (Anthropic) throughout Parts 2 and 3 as a step-by-step guide. It provided starting code and explanations for the API, the MVC website, the Azure Blob Storage integration, the Docker setup, the unit tests and the CI workflow. I added the code to the projects, built and ran it, fixed the problems that came up, and tested the behaviour. <!-- Add anything you changed, chose or debugged yourself. -->
+
+AI was used as a step-by-step guide. It provided explanations for how to correctly code, use and or build the API, the MVC website, the Azure Blob Storage integration, the Docker setup, the unit tests and the CI workflow. 

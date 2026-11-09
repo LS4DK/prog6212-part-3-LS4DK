@@ -54,7 +54,7 @@ What starts: a SQL Server container (`db`), the API container (`api`, creates th
 3. In **Package Manager Console** (default project `RaceDay.Api`) run `Update-Database`.
 4. *(Optional)* right-click `RaceDay.Api` → **Manage User Secrets** and add the Azure connection string:
    ```json
-   { "AzureStorage": { "ConnectionString": "paste-your-connection-string-here" } }
+   { "AzureStorage": { "ConnectionString": "DefaultEndpointsProtocol=https;AccountName=lonkeraceday2026;AccountKey=WQFjvFjkvJTi1s7fFo1Ovj/9zSGp8V39VUyM58b9RA7SUpnokyd0CvPK5KXoUd5ohBIhEPdGu587+ASt3Mx7UA==;EndpointSuffix=core.windows.net" } }
    ```
 5. Right-click the solution → **Configure Startup Projects** → **Multiple startup projects**, and set `RaceDay.Api` and `RaceDay.Web` to **Start**.
 6. Press **F5**. If the API's HTTPS port differs from the one in `RaceDay/RaceDay.Web/appsettings.json` (`Api:BaseUrl`), update that setting.

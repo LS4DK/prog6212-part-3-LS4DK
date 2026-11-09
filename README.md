@@ -11,7 +11,7 @@ Browser  ->  RaceDay.Web (MVC website)  ->  RaceDay.Api (REST API)  ->  SQL Serv
 The website contains no database code and never talks to Azure. Every read, write and image upload goes through the API.
 
 ## Video presentation
-Unlisted YouTube link: <!-- paste your link here -->
+Unlisted YouTube link: https://youtu.be/I5-SRc5LDRs
 
 ## CI/CD
 GitHub Actions runs on every push. It validates the repository structure, builds the API and the MVC website, runs all unit tests, and then builds both Docker images. Latest green run:
